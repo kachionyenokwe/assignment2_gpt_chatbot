@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Environment variables / secrets
+.env
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Generated results
+results/transcripts/*
+results/metrics.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated results
+# results/transcripts/
+# results/metrics.json
