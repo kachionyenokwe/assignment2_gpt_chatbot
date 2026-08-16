@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				<title>MetroCity Smart Infrastructure AI Assistant</title>
+				<style>
+					:root {
+					--bg-color: #0f172a;
+					--card-bg: #1e293b;
+					--accent: #38bdf8;
+					--text: #f8fafc;
+					--user-msg: #0284c7;
+					--bot-msg: #334155;
+					--tool-bg: #854d0e;
+					}
+					body {
+					font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+					background-color: var(--bg-color);
+					color: var(--text);
+					margin: 0;
+					padding: 20px;
+					display: flex;
+					justify-content: center;
+					}
+					.container {
+					width: 100%;
+					max-width: 900px;
+					display: flex;
+					flex-direction: column;
+					height: 90vh;
+					}
+					header {
+					background-color: var(--card-bg);
+					padding: 15px 20px;
+					border-radius: 10px 10px 0 0;
+					border-bottom: 2px solid var(--accent);
+					}
+					header h1 { margin: 0; font-size: 1.25rem; color: var(--accent); }
+					header p { margin: 5px 0 0 0; font-size: 0.85rem; opacity: 0.8; }
+
+					#chat-window {
+					flex: 1;
+					background-color: #111827;
+					padding: 20px;
+					overflow-y: auto;
+					display: flex;
+					flex-direction: column;
+					gap: 15px;
+					}
+					.message {
+					max-width: 80%;
+					padding: 12px 16px;
+					border-radius: 10px;
+					line-height: 1.5;
+					white-space: pre-wrap;
+					font-size: 0.95rem;
+					}
+					.user-message {
+					align-self: flex-end;
+					background-color: var(--user-msg);
+					color: white;
+					}
+					.assistant-message {
+					align-self: flex-start;
+					background-color: var(--bot-msg);
+					border-left: 3px solid var(--accent);
+					}
+					.status-message {
+					align-self: center;
+					background-color: var(--tool-bg);
+					font-size: 0.8rem;
+					padding: 6px 12px;
+					border-radius: 15px;
+					}
+
+					.telemetry-card {
+					background-color: var(--card-bg);
+					padding: 10px 20px;
+					font-size: 0.8rem;
+					display: flex;
+					justify-content: space-between;
+					border-top: 1px solid #334155;
+					color: var(--accent);
+					}
+
+					.input-area {
+					display: flex;
+					gap: 10px;
+					background-color: var(--card-bg);
+					padding: 15px;
+					border-radius: 0 0 10px 10px;
+					}
+					input[type="text"] {
+					flex: 1;
+					padding: 12px;
+					border-radius: 6px;
+					border: 1px solid #475569;
+					background-color: #0f172a;
+					color: white;
+					font-size: 0.95rem;
+					}
+					button {
+					padding: 12px 24px;
+					background-color: var(--accent);
+					color: #0f172a;
+					border: none;
+					border-radius: 6px;
+					font-weight: bold;
+					cursor: pointer;
+					}
+					button:disabled { opacity: 0.5; cursor: not-allowed; }
+				</style>
+			</head>
+	<body>
+		<div class="container">
+			<header>
+				<h1>🏙️ MetroCity Smart Infrastructure AI Assistant</h1>
+				<p>Task-Oriented Production Agent | Streaming SSE & Tool Calling Enabled</p>
+			</header>
+
+			<div id="chat-window"></div>
+
+			<div class="telemetry-card" id="telemetry-bar">
+				<span>TTFT: -- ms</span>
+				<span>Total Latency: -- ms</span>
+				<span>Tokens: --</span>
+				<span>Cost: $0.000000</span>
+			</div>
+
+			<div class="input-area">
+				<input type="text" id="user-input" placeholder="Ask about traffic signal rules, emergency overrides, or weather..." onkeydown="if(event.key==='Enter') sendMessage()" />
+				<button id="send-btn" onclick="sendMessage()">Send</button>
+			</div>
+		</div>
+
+		<script>
+			const conversationId = "session-" + Math.random().toString(36).substring(2, 9);
+
+			async function sendMessage() {
+			const inputField = document.getElementById("user-input");
+			const sendBtn = document.getElementById("send-btn");
+			const chatWindow = document.getElementById("chat-window");
+			const messageText = inputField.value.trim();
+
+			if (!messageText) return;
+
+			// Render User Message
+			appendMessage("user", messageText);
+			inputField.value = "";
+			inputField.disabled = true;
+			sendBtn.disabled = true;
+
+			// Prepare Assistant Stream Container
+			const assistantMsgDiv = appendMessage("assistant", "");
+
+			try {
+			const response = await fetch("/chat", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+			conversation_id: conversationId,
+			user_message: messageText,
+			model: "llama-3.1-8b-instant",
+			temperature: 0.2
+			})
+			});
+
+			const reader = response.body.getReader();
+			const decoder = new TextDecoder();
+			let buffer = "";
+
+			while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+
+			buffer += decoder.decode(value, { stream: true });
+			const lines = buffer.split("\n\n");
+			buffer = lines.pop(); // Keep incomplete frame in buffer
+
+			for (const line of lines) {
+			if (line.startsWith("data: ")) {
+			const jsonStr = line.replace("data: ", "").trim();
+			if (!jsonStr) continue;
+
+			try {
+			const event = JSON.parse(jsonStr);
+
+			if (event.type === "token") {
+			assistantMsgDiv.textContent += event.content;
+			chatWindow.scrollTop = chatWindow.scrollHeight;
+			} else if (event.type === "status") {
+			appendMessage("status", "⚙️ " + event.content);
+			} else if (event.type === "telemetry") {
+			updateTelemetryBar(event.data);
+			} else if (event.type === "error") {
+			assistantMsgDiv.textContent += "\n[Error: " + event.content + "]";
+			}
+			} catch (e) {
+			console.error("Failed to parse SSE payload", e);
+			}
+			}
+			}
+			}
+			} catch (err) {
+			assistantMsgDiv.textContent = "Failed to connect to backend server: " + err.message;
+			} finally {
+			inputField.disabled = false;
+			sendBtn.disabled = false;
+			inputField.focus();
+			}
+			}
+
+			function appendMessage(role, text) {
+			const chatWindow = document.getElementById("chat-window");
+			const msgDiv = document.createElement("div");
+			msgDiv.className = `message ${role}-message`;
+			msgDiv.textContent = text;
+			chatWindow.appendChild(msgDiv);
+			chatWindow.scrollTop = chatWindow.scrollHeight;
+			return msgDiv;
+			}
+
+			function updateTelemetryBar(data) {
+			const bar = document.getElementById("telemetry-bar");
+			bar.innerHTML = `
+			<span>
+				TTFT: <strong>${data.ttft_ms} ms</strong>
+			</span>
+			<span>
+				Total Latency: <strong>${data.total_latency_ms} ms</strong>
+			</span>
+			<span>
+				Tokens: <strong>${data.total_tokens}</strong> (P:${data.prompt_tokens} / C:${data.completion_tokens})
+			</span>
+			<span>
+				Est. Cost: <strong>$${data.estimated_cost_usd}</strong>
+			</span>
+			`;
+			}
+		</script>
+	</body>
+</html>
