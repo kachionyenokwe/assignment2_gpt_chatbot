@@ -72,7 +72,7 @@ def test_memory_rolling_window():
 # Test 6: Telemetry Tracker Calculation
 # -------------------------------------------------------------------
 def test_telemetry_cost_and_latency():
-    tracker = TelemetryTracker(model_name="gpt-4o-mini")
+    tracker = TelemetryTracker(model_name="llama-3.1-8b-instant")
     tracker.start_turn()
     tracker.record_first_token()
     metrics = tracker.end_turn(prompt_tokens=1000, completion_tokens=500)

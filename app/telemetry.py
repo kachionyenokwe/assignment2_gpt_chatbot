@@ -2,11 +2,18 @@ import time
 import json
 from typing import Dict, Any, List, Optional
 
-# OpenAI API pricing per 1,000 tokens (gpt-4o-mini baseline standards)
+# API pricing per 1,000 tokens
 PRICING_PER_1K = {
+    # Groq Models
+    "llama-3.1-8b-instant": {"prompt": 0.00005, "completion": 0.00008},
+    "llama-3.3-70b-versatile": {"prompt": 0.00059, "completion": 0.00079},
+    
+    # OpenAI Models (Fallback)
     "gpt-4o-mini": {"prompt": 0.00015, "completion": 0.00060},
     "gpt-4o": {"prompt": 0.00250, "completion": 0.01000},
-    "default": {"prompt": 0.00015, "completion": 0.00060}
+    
+    # Default baseline
+    "default": {"prompt": 0.00005, "completion": 0.00008}
 }
 
 
@@ -15,7 +22,7 @@ class TelemetryTracker:
     Logs performance metrics: Time-To-First-Token (TTFT),
     total latency, prompt/completion token usage, and estimated dollar cost.
     """
-    def __init__(self, model_name: str = "gpt-4o-mini"):
+    def __init__(self, model_name: str = "llama-3.1-8b-instant"):
         self.model_name = model_name
         self.start_time: float = 0.0
         self.first_token_time: Optional[float] = None

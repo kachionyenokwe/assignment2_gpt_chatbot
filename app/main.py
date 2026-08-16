@@ -5,7 +5,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
-
 from app.agent import stream_chat_response
 from app.memory import memory_manager
 from app.safety import safety_guard
@@ -32,6 +31,7 @@ app.add_middleware(
 STATIC_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static"
 )
+
 if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -40,7 +40,7 @@ if os.path.exists(STATIC_DIR):
 class ChatRequest(BaseModel):
     conversation_id: str = Field(..., example="session-101", description="Unique session identifier")
     user_message: str = Field(..., example="What is the weather in Metrocity?", description="User query text")
-    model: str = Field("gpt-4o-mini", description="OpenAI model identifier")
+    model: str = Field("llama-3.1-8b-instant", description="Groq model identifier")
     temperature: float = Field(0.2, ge=0.0, le=1.0, description="Sampling temperature")
 
 
@@ -57,7 +57,11 @@ async def root():
 @app.get("/health")
 async def health_check():
     """System status check endpoint."""
-    return {"status": "online", "system": "MetroCity GPT Engine", "api_key_configured": bool(os.getenv("OPENAI_API_KEY"))}
+    return {
+        "status": "online",
+        "system": "MetroCity GPT Engine",
+        "api_key_configured": bool(os.getenv("GROQ_API_KEY"))
+    }
 
 
 @app.post("/chat")
@@ -69,7 +73,10 @@ async def chat_endpoint(request: Request, body: ChatRequest):
     # Rate limit check per IP/Client
     client_ip = request.client.host if request.client else "unknown"
     if not safety_guard.check_rate_limit(client_ip):
-        raise HTTPException(status_code=429, detail="Rate limit exceeded. Please wait before sending more messages.")
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded. Please wait before sending more messages."
+        )
 
     return StreamingResponse(
         stream_chat_response(

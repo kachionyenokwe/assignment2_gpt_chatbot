@@ -14,12 +14,11 @@ KB_FILE_PATH = os.path.join(
 
 def get_weather(city: str) -> Dict[str, Any]:
     """
-    Simulates or fetches real-time environmental and weather metrics
-    that impact traffic flow and microgrid energy dynamics.
+    Returns simulated environmental and weather metrics for supported cities.
     """
+
     city_clean = city.strip().title()
-    
-    # Mock operational environmental weather database
+
     weather_db = {
         "Metrocity": {
             "temperature": "28°C",
@@ -49,19 +48,12 @@ def get_weather(city: str) -> Dict[str, Any]:
 
     if city_clean in weather_db:
         return {"status": "success", "city": city_clean, **weather_db[city_clean]}
-    
-    # Default response for unlisted cities
-    return {
-        "status": "success",
-        "city": city_clean,
-        "temperature": "22°C",
-        "condition": "Partly Cloudy",
-        "humidity": "50%",
-        "wind_speed": "12 km/h",
-        "traffic_impact": "Nominal",
-        "grid_load_level": "Normal"
-    }
 
+    return {
+        "status": "not_found",
+        "city": city_clean,
+        "message": f"No weather data available for {city_clean}."
+    }
 
 def lookup_kb(query: str) -> Dict[str, Any]:
     """

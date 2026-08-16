@@ -14,7 +14,7 @@ INJECTION_PATTERNS = [
 
 # Sensitive keys and tokens regex patterns for redaction
 SECRET_PATTERNS = [
-    r"sk-[a-zA-Z0-9]{32,}",          # OpenAI secret keys
+    r"gsk_[a-zA-Z0-9]{32,}",               # Groq secret keys (ADDED)
     r"Bearer\s+[a-zA-Z0-9\-\._~\+\/]+=*", # Bearer tokens
     r"password\s*=\s*['\"][^'\"]+['\"]"   # Hardcoded password strings
 ]
